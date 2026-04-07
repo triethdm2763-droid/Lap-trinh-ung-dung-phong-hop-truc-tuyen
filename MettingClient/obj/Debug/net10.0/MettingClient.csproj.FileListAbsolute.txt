@@ -12,3 +12,4 @@ c:\Metting Client\MettingClient\obj\Debug\net10.0\refint\MettingClient.dll
 c:\Metting Client\MettingClient\obj\Debug\net10.0\MettingClient.pdb
 c:\Metting Client\MettingClient\obj\Debug\net10.0\MettingClient.genruntimeconfig.cache
 c:\Metting Client\MettingClient\obj\Debug\net10.0\ref\MettingClient.dll
+c:\Metting Client\MettingClient\obj\Debug\net10.0\MettingClient.sourcelink.json
