@@ -1,18 +1,28 @@
-using System;
+using System.Net.Sockets;
 
-namespace NetworkingProgramming.Models
+namespace Network_Programming.Models
 {
     public class User
     {
         public string Username { get; set; }
-        public string RoomID { get; set; }
+        public string? RoomID { get; set; }
         public bool IsHost { get; set; }
+        public TcpClient? Client { get; set; }
 
-        public User(string username, string roomID, bool isHost)
+        // Constructor for server-side user (with client connection)
+        public User(string username, TcpClient client)
         {
             Username = username;
-            RoomID = roomID;
-            IsHost = isHost;
+            Client = client;
+            IsHost = false;
+        }
+
+        // Constructor for UI display (username only)
+        public User(string username)
+        {
+            Username = username;
+            Client = null;
+            IsHost = false;
         }
     }
 }
