@@ -1,13 +1,14 @@
 using System;
 
-namespace NetworkingProgramming.Models
+namespace Network_Programming.Models
 {
     public enum MessageType
     {
         JOIN,
         CHAT,
         LEAVE,
-        SYSTEM
+        SYSTEM,
+        PRIVATE
     }
 
     public class Message
@@ -27,11 +28,14 @@ namespace NetworkingProgramming.Models
 
         public override string ToString()
         {
-            if (Type == MessageType.SYSTEM)
-                return "[" + Time.ToString("HH:mm:ss") + "] " + Content;
-
-            return "[" + Time.ToString("HH:mm:ss") + "] "
-                   + Sender + ": " + Content;
+            return Type switch
+            {
+                MessageType.JOIN   => $"[{Time:HH:mm:ss}] + {Sender} joined",
+                MessageType.LEAVE  => $"[{Time:HH:mm:ss}] - {Sender} left",
+                MessageType.SYSTEM => $"[{Time:HH:mm:ss}] (SYSTEM) {Content}",
+                MessageType.PRIVATE => $"[{Time:HH:mm:ss}] (PRIVATE) {Sender}: {Content}",
+                _ => $"[{Time:HH:mm:ss}] {Sender}: {Content}"
+            };
         }
     }
 }
