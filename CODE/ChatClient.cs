@@ -1,56 +1,41 @@
-using System;
+using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
-namespace NetworkProgramming.Client
+namespace Network_Programming.Client
 {
     public class ChatClient
     {
-        private TcpClient client;
-        private NetworkStream stream;
+        private TcpClient? client;
+        private StreamReader? reader;
+        private StreamWriter? writer;
 
-        public Action<string> OnMessageReceived;
-
-        public void ConnectToServer(string ip, int port)
+        public void Connect(string ip, int port, string username)
         {
-            client = new TcpClient();
-            client.Connect(ip, port);
-            stream = client.GetStream();
+            client = new TcpClient(ip, port);
 
-            Thread thread = new Thread(ReceiveMessage);
-            thread.IsBackground = true;
-            thread.Start();
+            var stream = client.GetStream();
+            reader = new StreamReader(stream);
+            writer = new StreamWriter(stream) { AutoFlush = true };
+
+            writer.WriteLine(username);
+
+            new Thread(Receive).Start();
         }
 
-        public void SendMessage(string message)
+        public void Send(string msg)
         {
-            if (stream == null) return;
-
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            stream.Write(data, 0, data.Length);
+            writer?.WriteLine(msg);
         }
 
-        private void ReceiveMessage()
+        private void Receive()
         {
-            byte[] buffer = new byte[1024];
-
             while (true)
             {
-                try
+                string? msg = reader?.ReadLine();
+                if (msg != null)
                 {
-                    int bytesRead = stream.Read(buffer, 0, buffer.Length);
-
-                    if (bytesRead > 0)
-                    {
-                        string msg = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        OnMessageReceived?.Invoke(msg);
-                    }
-                }
-                catch
-                {
-                    Console.WriteLine("Disconnected");
-                    break;
+                    Console.WriteLine(msg);
                 }
             }
         }
