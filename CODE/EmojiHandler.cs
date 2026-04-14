@@ -1,12 +1,20 @@
-﻿public static class EmojiHandler
+namespace Network_Programming.Features
 {
-    public static bool IsEmojiMessage(string msg)
+    public static class EmojiHandler
     {
-        return msg.StartsWith("/emoji");
-    }
-
-    public static string ParseEmoji(string msg)
-    {
-        return msg.Replace("/emoji ", "");
+        public static string Parse(string msg)
+        {
+            return msg
+                .Replace(":)", "😊")
+                .Replace(":>", "😂")
+                .Replace(":(", "😢")
+                .Replace("<3", "❤️")
+                .Replace(":D", "😄")
+                .Replace(":fire", "🔥")
+                .Replace(":thumbsup", "👍")
+                .Replace(":cool", "😎")
+                ;
+            
+        }
     }
 }
