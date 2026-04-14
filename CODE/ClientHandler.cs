@@ -1,134 +1,219 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
-using System.Collections.Generic;
+using Network_Programming.Models;
+using Network_Programming.Features;
 
-namespace Server
+namespace Network_Programming.Server
 {
-    class ClientHandler
+    public class ClientHandler
     {
         private TcpClient client;
         private StreamReader reader;
         private StreamWriter writer;
+        private RoomManager roomManager;
+        private User user;
 
-        private string username;
-        private string currentRoom = null;
-
-        // ===== DATA =====
-        private static Dictionary<string, string> roomPasswords = new Dictionary<string, string>();
-        private static Dictionary<string, List<ClientHandler>> rooms = new Dictionary<string, List<ClientHandler>>();
-
-        public ClientHandler(TcpClient client)
+        public ClientHandler(TcpClient client, RoomManager roomManager)
         {
             this.client = client;
+            this.roomManager = roomManager;
 
-            NetworkStream stream = client.GetStream();
+            var stream = client.GetStream();
             reader = new StreamReader(stream);
-            writer = new StreamWriter(stream);
-            writer.AutoFlush = true;
+            writer = new StreamWriter(stream) { AutoFlush = true };
+
+            user = new User("Unknown", client);
         }
 
-        // ===== HANDLE CLIENT =====
         public void HandleClient()
         {
             try
             {
-                username = ReceiveMessage();
-                Console.WriteLine(username + " connected");
+                user.Username = reader.ReadLine() ?? "Unknown";
 
-                while (true)
+                string? msg;
+
+                while ((msg = reader.ReadLine()) != null)
                 {
-                    string msg = ReceiveMessage();
-                    if (msg == null) break;
+                    Console.WriteLine("RECEIVED: " + msg);
 
-                    // ===== CREATE ROOM =====
-                    if (msg.StartsWith("CREATE_ROOM"))
+                    if (msg == "CREATE")
                     {
-                        string[] p = msg.Split('|');
-                        string room = p[1];
-                        string pass = p[2];
+                        string roomId = roomManager.CreateRoom();
+                        user.IsHost = true;
+                        user.RoomID = roomId;
+                        roomManager.GetRoomUsers(roomId).Add(user);
+                        Send($"ROOM_ID|{roomId}");
+                        Console.WriteLine("SENT ROOM_ID: " + roomId);
+                        continue;
+                    }
 
-                        if (!rooms.ContainsKey(room))
+                    if (msg.StartsWith("JOIN|"))
+                    {
+                        string roomId = msg.Split('|')[1].Trim();
+
+                        bool ok = roomManager.JoinRoom(roomId, user);
+
+                        if (!ok)
                         {
-                            rooms[room] = new List<ClientHandler>();
-                            roomPasswords[room] = pass;
-
-                            SendMessage("CREATE_OK");
-                            Console.WriteLine(username + " created room " + room);
+                            Send("ERROR|Room not found");
                         }
                         else
                         {
-                            SendMessage("ROOM_EXISTS");
+                            user.RoomID = roomId;
+                            BroadcastSystem(roomId, $"{user.Username} joined");
+                            BroadcastRoomInfo(roomId);
+                            Send($"ROOM_INFO|{roomId}|0|{string.Join(",", roomManager.GetRoomUsers(roomId).Select(u => u.Username))}");
                         }
+
+                        continue;
                     }
 
-                    // ===== JOIN ROOM =====
-                    else if (msg.StartsWith("JOIN_ROOM"))
+                    if (msg.StartsWith("KICK|"))
                     {
-                        string[] p = msg.Split('|');
-                        string room = p[1];
-                        string pass = p[2];
-
-                        if (rooms.ContainsKey(room))
+                        string target = msg.Split('|')[1];
+                        if (user.IsHost && user.RoomID != null)
                         {
-                            if (roomPasswords[room] == pass)
-                            {
-                                currentRoom = room;
-                                rooms[room].Add(this);
-
-                                SendMessage("JOIN_OK");
-                                Console.WriteLine(username + " joined room " + room);
-
-                                Broadcast(room, "[SERVER] " + username + " joined room");
-                            }
-                            else
-                            {
-                                SendMessage("WRONG_PASS");
-                            }
+                            roomManager.KickUser(user.RoomID, target);
                         }
-                        else
-                        {
-                            SendMessage("ROOM_NOT_FOUND");
-                        }
+                        continue;
                     }
 
-                    // ===== SEND MESSAGE =====
-                    else if (msg.StartsWith("SEND_MESSAGE"))
+                    if (msg.StartsWith("CLOSE"))
                     {
-                        string content = msg.Split('|')[1];
-
-                        if (currentRoom != null)
+                        if (user.IsHost && user.RoomID != null)
                         {
-                            string full = username + ": " + content;
-                            Broadcast(currentRoom, full);
+                            roomManager.CloseRoom(user.RoomID);
                         }
+                        break;
+                    }
+
+                    if (msg.StartsWith("PRIVATE|"))
+                    {
+                        string[] parts = msg.Split('|');
+                        if (parts.Length >= 3)
+                        {
+                            string targetUser = parts[1];
+                            string privateMsg = string.Join("|", parts.Skip(2));
+
+                            if (user.RoomID == null) continue;
+
+                            var roomUsers = roomManager.GetRoomUsers(user.RoomID);
+                            PrivateChat.SendPrivate(user, targetUser, privateMsg, roomUsers);
+                        }
+                        continue;
+                    }
+
+                    if (msg.StartsWith("FILE|"))
+                    {
+                        string[] parts = msg.Split('|');
+                        if (parts.Length >= 4)
+                        {
+                            string fileName = parts[1];
+                            string base64Data = parts[2];
+                            string sender = parts[3];
+
+                            // Nhận file và lưu vào thư mục Downloads
+                            string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
+                            FileTransfer.ReceiveFile(client, fileName, base64Data, savePath);
+
+                            // Broadcast thông báo file
+                            if (user.RoomID != null)
+                            {
+                                roomManager.Broadcast(user.RoomID, $"[SYSTEM] {sender} sent file: {fileName}");
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (msg.StartsWith("FILE_PRIVATE|"))
+                    {
+                        string[] parts = msg.Split('|');
+                        if (parts.Length >= 5)
+                        {
+                            string targetUser = parts[1];
+                            string fileName = parts[2];
+                            string base64Data = parts[3];
+                            string sender = parts[4];
+
+                            // Chỉ nhận nếu là target
+                            if (user.Username == targetUser)
+                            {
+                                string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", fileName);
+                                FileTransfer.ReceiveFile(client, fileName, base64Data, savePath);
+
+                                // Gửi thông báo private
+                                Send($"[PRIVATE] {sender} sent file: {fileName}");
+                            }
+                        }
+                        continue;
+                    }
+
+                    // Chat message
+                    if (user.RoomID != null)
+                    {
+                        roomManager.Broadcast(user.RoomID, $"{user.Username}: {msg}");
                     }
                 }
             }
-            catch { }
-
-            Console.WriteLine(username + " disconnected");
-            client.Close();
+            catch (Exception ex)
+            {
+                Console.WriteLine("SERVER ERROR: " + ex.Message);
+            }
+            finally
+            {
+                roomManager.LeaveRoom(user);
+                client.Close();
+            }
         }
 
-        // ===== RECEIVE =====
-        public string ReceiveMessage()
-        {
-            return reader.ReadLine();
-        }
-
-        // ===== SEND =====
-        public void SendMessage(string msg)
+        private void Send(string msg)
         {
             writer.WriteLine(msg);
         }
 
-        // ===== BROADCAST =====
-        private void Broadcast(string room, string msg)
+        private void BroadcastSystem(string roomId, string msg)
         {
-            foreach (var c in rooms[room])
+            var users = roomManager.GetRoomUsers(roomId);
+            foreach (var u in users)
             {
-                c.SendMessage(msg);
+                try
+                {
+                    if (u.Client == null) continue;
+
+                    var streamWriter = new StreamWriter(u.Client.GetStream())
+                    {
+                        AutoFlush = true
+                    };
+
+                    streamWriter.WriteLine("[SYSTEM] " + msg);
+                }
+                catch { }
+            }
+        }
+
+        private void BroadcastRoomInfo(string roomId)
+        {
+            var users = roomManager.GetRoomUsers(roomId).Select(u => u.Username).ToList();
+            string userList = string.Join(",", users);
+
+            var roomUsers = roomManager.GetRoomUsers(roomId);
+            foreach (var u in roomUsers)
+            {
+                try
+                {
+                    if (u.Client == null) continue;
+
+                    var streamWriter = new StreamWriter(u.Client.GetStream())
+                    {
+                        AutoFlush = true
+                    };
+
+                    streamWriter.WriteLine($"ROOM_INFO|{roomId}|{users.Count}|{userList}");
+                }
+                catch { }
             }
         }
     }
