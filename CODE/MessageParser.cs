@@ -1,44 +1,16 @@
-using System;
-using System.Text.Json;
-using NetworkingProgramming.Models;
-
-namespace NetworkingProgramming.Utils
+namespace Network_Programming.Network
 {
     public static class MessageParser
     {
-        public static string Serialize(Message msg)
+        public static string Serialize(string type, string content)
         {
-            return JsonSerializer.Serialize(msg);
-        }
-        public static Message Deserialize(string json)
-        {
-            try
-            {
-                return JsonSerializer.Deserialize<Message>(json);
-            }
-            catch
-            {
-                return new Message("System", "Invalid message format", MessageType.SYSTEM);
-            }
-        }
-        public static Message CreateChat(string sender, string content)
-        {
-            return new Message(sender, content, MessageType.CHAT);
+            return $"{type}|{content}";
         }
 
-        public static Message CreateSystem(string content)
+        public static (string type, string content) Deserialize(string msg)
         {
-            return new Message("System", content, MessageType.SYSTEM);
-        }
-
-        public static Message CreateJoin(string user)
-        {
-            return new Message("System", user + " joined", MessageType.JOIN);
-        }
-
-        public static Message CreateLeave(string user)
-        {
-            return new Message("System", user + " left", MessageType.LEAVE);
+            var parts = msg.Split('|');
+            return (parts[0], parts.Length > 1 ? parts[1] : "");
         }
     }
 }
