@@ -1,45 +1,56 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace Server
+namespace Network_Programming.Server
 {
-    class ChatServer
+    public class ChatServer
     {
         private TcpListener server;
-        private bool isRunning = false;
+        private bool running = false;
+        private RoomManager roomManager = new();
 
-        public void Start(int port)
+        public RoomManager RoomManager => roomManager;
+
+        public ChatServer(int port)
         {
             server = new TcpListener(IPAddress.Any, port);
-            server.Start();
-            isRunning = true;
-
-            Console.WriteLine("Server started on port " + port);
-
-            AcceptClient();
         }
 
-        public void AcceptClient()
+        public void Start()
         {
-            while (isRunning)
+            server.Start();
+            running = true;
+
+            Console.WriteLine("Server started...");
+
+            new Thread(AcceptClient) { IsBackground = true }.Start();
+        }
+
+        private void AcceptClient()
+        {
+            while (running)
             {
-                TcpClient client = server.AcceptTcpClient();
-                Console.WriteLine("Client connected!");
+                try
+                {
+                    var client = server.AcceptTcpClient();
+                    Console.WriteLine("Client connected");
 
-                ClientHandler handler = new ClientHandler(client);
-
-                Thread t = new Thread(handler.HandleClient);
-                t.Start();
+                    var handler = new ClientHandler(client, roomManager);
+                    new Thread(handler.HandleClient) { IsBackground = true }.Start();
+                }
+                catch
+                {
+                    break;
+                }
             }
         }
 
         public void Stop()
         {
-            isRunning = false;
+            running = false;
             server.Stop();
-            Console.WriteLine("Server stopped!");
         }
     }
 }
