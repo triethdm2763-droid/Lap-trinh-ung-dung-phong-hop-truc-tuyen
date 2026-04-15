@@ -7,6 +7,7 @@ namespace Network_Programming.Host
     public class HostConsoleUI
     {
         private string roomId = "";
+        private string username = "";
         private List<User> users = new();
         private List<string> messages = new();
         public bool needsChatRerender = true;
@@ -15,6 +16,11 @@ namespace Network_Programming.Host
         public void SetRoom(string id)
         {
             roomId = id;
+        }
+
+        public void SetUsername(string name)
+        {
+            username = name;
         }
 
         public void UpdateUsers(List<User> list)
@@ -43,6 +49,8 @@ namespace Network_Programming.Host
             Console.WriteLine("+--------------------------------------------------------------+");
             Console.WriteLine($"| Room ID: {roomId,-52}|");
             Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
+            Console.WriteLine("+--------------------------+-----------------------------------+");
+            Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
             Console.WriteLine("+--------------------------+-----------------------------------+");
 
             Console.WriteLine("| Participants             | Chat                              |");
@@ -85,6 +93,8 @@ namespace Network_Programming.Host
     Console.WriteLine("+--------------------------------------------------------------+");
     Console.WriteLine($"| Room ID: {roomId,-52}|");
     Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
+    Console.WriteLine("+--------------------------+-----------------------------------+");
+    Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
     Console.WriteLine("+--------------------------------------------------------------+");
 
    
