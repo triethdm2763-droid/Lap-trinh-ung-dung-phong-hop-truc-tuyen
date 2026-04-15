@@ -63,8 +63,8 @@ namespace Network_Programming.Client
             
             Console.WriteLine("+--------------------------------------------------------------+");
             Console.WriteLine("|                    ONLINE MEETING ROOM                       |");
-            Console.WriteLine("+--------------------------------------------------------------+");
-            Console.WriteLine($"| Room: {roomId,-17} Users: {users.Count,-9} You: {username,-15}|");
+            Console.WriteLine("+--------------------------+-----------------------------------+");
+            Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
             Console.WriteLine("+--------------------------------------------------------------+");
 
             // CHAT BOX
