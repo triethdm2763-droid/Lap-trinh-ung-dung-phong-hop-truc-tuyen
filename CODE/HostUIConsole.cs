@@ -12,6 +12,7 @@ namespace Network_Programming.Host
         private List<string> messages = new();
         public bool needsChatRerender = true;
         private object messageLock = new object();
+        private object renderLock = new object();
 
         private void ClearScreen()
         {
