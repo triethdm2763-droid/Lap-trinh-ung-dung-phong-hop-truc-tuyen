@@ -62,8 +62,6 @@ class Program
                 if (roomIdResponse != null && roomIdResponse.StartsWith("ROOM_ID|"))
                 {
                     string roomId = roomIdResponse.Split('|')[1];
-                    //Console.WriteLine($"Room created: {roomId}");
-                    //Console.WriteLine($"Invite Link: 127.0.0.1:8080/{roomId}");
 
                     HostConsoleUI hostUI = new HostConsoleUI();
                     hostUI.SetRoom(roomId);
