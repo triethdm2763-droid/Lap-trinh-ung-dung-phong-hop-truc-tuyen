@@ -13,6 +13,17 @@ namespace Network_Programming.Host
         public bool needsChatRerender = true;
         private object messageLock = new object();
 
+        private void ClearScreen()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                Console.Clear();
+            }
+
+            Console.Write("\u001b[3J");
+            Console.SetCursorPosition(0, 0);
+        }
+
         public void SetRoom(string id)
         {
             roomId = id;
@@ -34,7 +45,7 @@ namespace Network_Programming.Host
             {
                 messages.Add(msg);
 
-                if (messages.Count > 20)
+                if (messages.Count > 90)
                     messages.RemoveAt(0);
                 
                 needsChatRerender = true;
@@ -43,89 +54,97 @@ namespace Network_Programming.Host
 
         public void Render()
         {
-        
-            Console.WriteLine("+--------------------------------------------------------------+");
-            Console.WriteLine("|                    HOST CONTROL PANEL                        |");
-            Console.WriteLine("+--------------------------------------------------------------+");
-            Console.WriteLine($"| Room ID: {roomId,-52}|");
-            Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
-            Console.WriteLine("+--------------------------+-----------------------------------+");
-            Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
-            Console.WriteLine("+--------------------------+-----------------------------------+");
-
-            Console.WriteLine("| Participants             | Chat                              |");
-            Console.WriteLine("+--------------------------+-----------------------------------+");
-
-            int maxRows = Math.Max(users.Count, messages.Count);
-
-            for (int i = 0; i < maxRows; i++)
+            lock (renderLock)
             {
-                string userText = "";
-                string chatText = "";
+                ClearScreen();
+        
+                Console.WriteLine("+--------------------------------------------------------------+");
+                Console.WriteLine("|                    HOST CONTROL PANEL                        |");
+                Console.WriteLine("+--------------------------------------------------------------+");
+                Console.WriteLine($"| Room ID: {roomId,-52}|");
+                Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
+                Console.WriteLine("+--------------------------+-----------------------------------+");
+                Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
+                Console.WriteLine("+--------------------------+-----------------------------------+");
+    
+                Console.WriteLine("| Participants             | Chat                              |");
+                Console.WriteLine("+--------------------------+-----------------------------------+");
+    
+                int maxRows = Math.Max(users.Count, messages.Count);
 
-                if (i < users.Count)
+                for (int i = 0; i < maxRows; i++)
                 {
-                    var u = users[i];
-                    userText = u.Username + (u.IsHost ? " (Host)" : "");
-                }
-
-                lock (messageLock)
-                {
-                    if (i < messages.Count)
+                    string userText = "";
+                    string chatText = "";
+    
+                    if (i < users.Count)
                     {
-                        chatText = messages[i];
+                        var u = users[i];
+                        userText = u.Username + (u.IsHost ? " (Host)" : "");
                     }
+    
+                    lock (messageLock)
+                    {
+                        if (i < messages.Count)
+                        {
+                            chatText = messages[i];
+                        }
+                    }
+    
+                    Console.WriteLine($"| {userText,-24} | {chatText,-33} |");
                 }
-
-                Console.WriteLine($"| {userText,-24} | {chatText,-33} |");
+    
+                Console.WriteLine("+--------------------------+-----------------------------------+");
+                Console.WriteLine("| [1] Kick  [2] Refresh  [3] Exit  [4] Chat                    |");
+                Console.WriteLine("+--------------------------------------------------------------+");
+                Console.Write("Choose: ");
             }
-
-            Console.WriteLine("+--------------------------+-----------------------------------+");
-            Console.WriteLine("| [1] Kick  [2] Refresh  [3] Exit  [4] Chat                    |");
-            Console.WriteLine("+--------------------------------------------------------------+");
-            Console.Write("Choose: ");
         }
 
         public void RenderChat()
-{
-    Console.WriteLine("+--------------------------------------------------------------+");
-    Console.WriteLine("|                        CHAT MODE                             |");
-    Console.WriteLine("+--------------------------------------------------------------+");
-    Console.WriteLine($"| Room ID: {roomId,-52}|");
-    Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
-    Console.WriteLine("+--------------------------+-----------------------------------+");
-    Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
-    Console.WriteLine("+--------------------------------------------------------------+");
-
-   
-    Console.WriteLine("| Chat                                                        |");
-    Console.WriteLine("+--------------------------------------------------------------+");
-
-    lock (messageLock)
-    {
-        int maxDisplay = 15;
-
-        var displayMessages = messages.Count > maxDisplay
-            ? messages.Skip(messages.Count - maxDisplay)
-            : messages;
-
-        foreach (var msg in displayMessages)
         {
-            // cắt nếu quá dài
-            string safeMsg = msg.Length > 60 ? msg.Substring(0, 57) + "..." : msg;
-            Console.WriteLine($"| {safeMsg,-60}|");
+            lock (renderLock)
+            {
+                ClearScreen();
+                Console.WriteLine("+--------------------------------------------------------------+");
+                Console.WriteLine("|                        CHAT MODE                             |");
+                Console.WriteLine("+--------------------------------------------------------------+");
+                Console.WriteLine($"| Room ID: {roomId,-52}|");
+                Console.WriteLine($"| Invite: 127.0.0.1:8080/{roomId,-38}|"); 
+                Console.WriteLine("+--------------------------+-----------------------------------+");
+                Console.WriteLine($"| Room: {roomId,-15} Users: {users.Count}/100       You: {username,-15}|");
+                Console.WriteLine("+--------------------------------------------------------------+");
+            
+               
+                Console.WriteLine("| Chat                                                        |");
+                Console.WriteLine("+--------------------------------------------------------------+");
+            
+                lock (messageLock)
+                {
+                    int maxDisplay = 110;
+            
+                    var displayMessages = messages.Count > maxDisplay
+                        ? messages.Skip(messages.Count - maxDisplay)
+                        : messages;
+            
+                    foreach (var msg in displayMessages)
+                    {
+                        // cắt nếu quá dài
+                        string safeMsg = msg.Length > 60 ? msg.Substring(0, 57) + "..." : msg;
+                        Console.WriteLine($"| {safeMsg,-60}|");
+                    }
+                }
+
+                Console.WriteLine("+--------------------------------------------------------------+");
+            
+                // HƯỚNG DẪN
+                Console.WriteLine("| exit | file <path> | private <user> <msg>                    |");
+                Console.WriteLine("+--------------------------------------------------------------+");
+            
+                // INPUT
+                Console.Write(">> ");
+            }
         }
-    }
-
-    Console.WriteLine("+--------------------------------------------------------------+");
-
-    // HƯỚNG DẪN
-    Console.WriteLine("| exit | file <path> | private <user> <msg>                    |");
-    Console.WriteLine("+--------------------------------------------------------------+");
-
-    // INPUT
-    Console.Write(">> ");
-}
 
         public string GetChatInput()
         {
