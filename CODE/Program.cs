@@ -4,10 +4,7 @@ using Network_Programming.Models;
 using System.Net.Sockets;
 using Network_Programming.Host;
 using Network_Programming.Features;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
+
 
 class Program
 {
@@ -65,6 +62,7 @@ class Program
 
                     HostConsoleUI hostUI = new HostConsoleUI();
                     hostUI.SetRoom(roomId);
+                    hostUI.SetUsername(username);
 
                     // Thread nhận message
                     new Thread(() =>
