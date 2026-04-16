@@ -108,7 +108,7 @@ namespace Network_Programming.Client
                 if (userLine.Length > 60)
                     userLine = userLine.Substring(0, 57) + "...";
 
-                Console.WriteLine($"| Users: {userLine,-54}|");
+                Console.WriteLine($"| Users: {userLine,-54} |");
                 Console.WriteLine("+--------------------------------------------------------------+");
     
                 // INPUT
